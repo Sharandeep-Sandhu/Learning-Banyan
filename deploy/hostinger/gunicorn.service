@@ -1,0 +1,25 @@
+[Unit]
+Description=LearningBanyan Gunicorn
+After=network.target mysql.service postgresql.service
+Wants=network-online.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/learningbanyan
+EnvironmentFile=/var/www/learningbanyan/.env
+Environment=PATH=/var/www/learningbanyan/venv/bin
+Environment=HOME=/var/www/learningbanyan
+RuntimeDirectory=learningbanyan
+RuntimeDirectoryMode=0755
+ExecStart=/var/www/learningbanyan/venv/bin/gunicorn \
+    --config /var/www/learningbanyan/gunicorn.conf.py \
+    --bind unix:/run/learningbanyan/gunicorn.sock
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
