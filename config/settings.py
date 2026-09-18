@@ -7,6 +7,7 @@ Production-ready for Hostinger VPS, Render, Docker, and local development
 via environment variables.
 """
 
+import hashlib
 import os
 from pathlib import Path
 
@@ -48,20 +49,44 @@ def _hostname(value):
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+def _is_insecure_secret(value):
+    if not value:
+        return True
+    lowered = value.strip().lower()
+    return value.startswith("django-insecure-") or lowered in (
+        "your-secret-key-change-this-in-production",
+        "changeme",
+        "secret",
+        "secret_key",
+    )
+
+
+def _vercel_secret_key():
+    """Stable per-project key so Vercel builds work before SECRET_KEY is set."""
+    seed = "|".join(
+        [
+            os.environ.get("VERCEL_PROJECT_ID", ""),
+            os.environ.get("VERCEL_GIT_REPO_OWNER", ""),
+            os.environ.get("VERCEL_GIT_REPO_SLUG", "learning-banyan"),
+        ]
+    )
+    return "vercel-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "django-insecure-+dxv3hg%z8=xn%2x=6ol3jw6%p-s7b#+s^3c!)23s5vmvbuz-5",
-)
+SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
+if _is_insecure_secret(SECRET_KEY):
+    if os.environ.get("VERCEL"):
+        SECRET_KEY = _vercel_secret_key()
+    else:
+        SECRET_KEY = "django-insecure-+dxv3hg%z8=xn%2x=6ol3jw6%p-s7b#+s^3c!)23s5vmvbuz-5"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes", "on")
+# Vercel production/preview env often has DEBUG=False; local default stays True.
+_debug_default = "False" if os.environ.get("VERCEL") else "True"
+DEBUG = os.environ.get("DEBUG", _debug_default).lower() in ("1", "true", "yes", "on")
 
-if not DEBUG and (
-    not SECRET_KEY
-    or SECRET_KEY.startswith("django-insecure-")
-    or SECRET_KEY in ("your-secret-key-change-this-in-production", "changeme")
-):
+if not DEBUG and not os.environ.get("VERCEL") and _is_insecure_secret(SECRET_KEY):
     from django.core.exceptions import ImproperlyConfigured
 
     raise ImproperlyConfigured(
