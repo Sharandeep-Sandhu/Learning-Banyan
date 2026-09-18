@@ -49,56 +49,44 @@ def _hostname(value):
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-def _is_insecure_secret(value):
-    if not value:
-        return True
-    lowered = value.strip().lower()
-    return value.startswith("django-insecure-") or lowered in (
+def _fallback_secret_key():
+    """Never fail settings import (Vercel reads this file during build)."""
+    seed = "|".join(
+        [
+            os.environ.get("SECRET_KEY", ""),
+            os.environ.get("VERCEL_PROJECT_ID", ""),
+            os.environ.get("VERCEL_GIT_REPO_SLUG", "learning-banyan"),
+            "learning-banyan-fallback",
+        ]
+    )
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()
+
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
+if (
+    not SECRET_KEY
+    or SECRET_KEY.startswith("django-insecure-")
+    or SECRET_KEY.lower()
+    in (
         "your-secret-key-change-this-in-production",
         "changeme",
         "secret",
         "secret_key",
     )
-
-
-def _vercel_secret_key():
-    """Stable per-project key so Vercel builds work before SECRET_KEY is set."""
-    seed = "|".join(
-        [
-            os.environ.get("VERCEL_PROJECT_ID", ""),
-            os.environ.get("VERCEL_GIT_REPO_OWNER", ""),
-            os.environ.get("VERCEL_GIT_REPO_SLUG", "learning-banyan"),
-        ]
-    )
-    return "vercel-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()
-
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
-if _is_insecure_secret(SECRET_KEY):
-    if os.environ.get("VERCEL"):
-        SECRET_KEY = _vercel_secret_key()
-    else:
-        SECRET_KEY = "django-insecure-+dxv3hg%z8=xn%2x=6ol3jw6%p-s7b#+s^3c!)23s5vmvbuz-5"
+):
+    SECRET_KEY = _fallback_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# Vercel production/preview env often has DEBUG=False; local default stays True.
-_debug_default = "False" if os.environ.get("VERCEL") else "True"
-DEBUG = os.environ.get("DEBUG", _debug_default).lower() in ("1", "true", "yes", "on")
-
-if not DEBUG and not os.environ.get("VERCEL") and _is_insecure_secret(SECRET_KEY):
-    from django.core.exceptions import ImproperlyConfigured
-
-    raise ImproperlyConfigured(
-        "Set a strong SECRET_KEY in the environment (or .env) before running "
-        "with DEBUG=False."
-    )
+DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes", "on")
 
 # Render sets RENDER=true; Hostinger uses SITE_DOMAIN / VPS_IP / ALLOWED_HOSTS.
 # In production without an explicit ALLOWED_HOSTS, still allow local probes
 # so collectstatic/migrate/health tooling does not break during builds.
-_default_hosts = "127.0.0.1,localhost"
+_default_hosts = "127.0.0.1,localhost,.vercel.app"
 ALLOWED_HOSTS = _csv_env("ALLOWED_HOSTS", _default_hosts)
+if ".vercel.app" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(".vercel.app")
 if os.environ.get("RENDER") or os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
     if ".onrender.com" not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(".onrender.com")
@@ -146,10 +134,8 @@ if _render_hostname:
     _origin = f"https://{_render_hostname}"
     if _origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_origin)
-if os.environ.get("VERCEL"):
-    for origin in ("https://*.vercel.app",):
-        if origin not in CSRF_TRUSTED_ORIGINS:
-            CSRF_TRUSTED_ORIGINS.append(origin)
+if "https://*.vercel.app" not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append("https://*.vercel.app")
 
 for host in ALLOWED_HOSTS:
     if host in ("*", "localhost", "127.0.0.1") or host.startswith("."):
