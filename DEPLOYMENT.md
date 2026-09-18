@@ -1,8 +1,6 @@
 # Learning Banyan - Deployment Guide
 
-**Hostinger:** Django needs a **VPS**. Follow **[HOSTINGER_DEPLOY.md](HOSTINGER_DEPLOY.md)**.
-
-This guide provides instructions for deploying the Learning Banyan application to various platforms.
+Primary target is **Vercel**. Local SQLite works without extra config.
 
 ## Table of Contents
 
@@ -107,14 +105,11 @@ docker-compose down -v
 
 Vercel detects `manage.py` and deploys Django as a Python serverless function.
 
-1. Import the GitHub repo in the Vercel dashboard (Framework Preset: Other / Django).
-2. Set these **Environment Variables** (Production + Preview):
-   - `SECRET_KEY` — a long random string
-   - `DEBUG` — `False`
-   - `ALLOWED_HOSTS` — `.vercel.app` (or your custom domain)
-3. Redeploy.
+1. Import the GitHub repo in the Vercel dashboard.
+2. Deploy **latest `main`**. No `SECRET_KEY` is required.
+3. Optional env vars: `DEBUG=False`, `DATABASE_URL` for Postgres.
 
-Do **not** add `mysqlclient` on Vercel. The app uses SQLite (`db.sqlite3`) by default, or Postgres if you set `DATABASE_URL`. SQLite writes on Vercel live in `/tmp` (reset on each cold start). For persistent data, attach Vercel Postgres / Neon and set `DATABASE_URL`.
+The app uses SQLite (`db.sqlite3`) by default. SQLite writes on Vercel live in `/tmp` (reset on each cold start). For persistent data, attach Postgres and set `DATABASE_URL`.
 
 Large media folders are listed in `.vercelignore` so the function bundle stays under Vercel’s size limit.
 

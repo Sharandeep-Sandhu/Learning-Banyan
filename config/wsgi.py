@@ -1,7 +1,7 @@
 """
 WSGI config for config project.
 
-Used by Gunicorn (Hostinger Nginx path) and OpenLiteSpeed (lswsgi startup file).
+WSGI entrypoint used by Vercel, Gunicorn, and local runserver.
 """
 
 import os

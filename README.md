@@ -195,10 +195,10 @@ Create a `.env` file in the project root:
 
 ```
 DEBUG=True
-SECRET_KEY=your-secret-key-here
-DATABASE_URL=postgresql://user:password@localhost:5432/learningbanyan
-ALLOWED_HOSTS=localhost,127.0.0.1
+ALLOWED_HOSTS=localhost,127.0.0.1,.vercel.app
 ```
+
+`SECRET_KEY` is optional. SQLite is the default database.
 
 Then load it in settings.py using `python-decouple`.
 
@@ -251,35 +251,15 @@ The application uses custom CSS with a modern design featuring:
 
 ## Deployment
 
-### Hostinger VPS (current production target)
-
-Django cannot run on Hostinger Web/Cloud shared hosting. Use a **VPS**.
-
-Full guide: **[HOSTINGER_DEPLOY.md](HOSTINGER_DEPLOY.md)**
-
-On the VPS (as root):
-
-```bash
-export DOMAIN=yourdomain.com
-export VPS_IP=YOUR_VPS_IP
-export REPO_URL=https://github.com/learningbanyan/LearningBanyan.git
-git clone "$REPO_URL" /var/www/learningbanyan
-bash /var/www/learningbanyan/deploy/hostinger/setup.sh
-```
-
-Then create an admin user and issue SSL with certbot (steps in the guide).
-
 ### Vercel
 
-Connect the GitHub repo at [vercel.com](https://vercel.com). Vercel detects Django from `manage.py`.
+Connect the GitHub repo at [vercel.com](https://vercel.com). Vercel detects Django from `manage.py`. No `SECRET_KEY` is required (a fallback is generated). Optional env vars:
 
-Set environment variables:
+- `DEBUG` — `False` in production
+- `ALLOWED_HOSTS` — `.vercel.app` (already the default)
+- `DATABASE_URL` — Postgres if you want persistent data (otherwise SQLite)
 
-- `SECRET_KEY` — random long string
-- `DEBUG` — `False`
-- `ALLOWED_HOSTS` — `.vercel.app`
-
-The default database is SQLite. For persistent data on Vercel, add a Postgres `DATABASE_URL`.
+Redeploy **latest `main`**, not an older failed deployment.
 
 ### Render
 

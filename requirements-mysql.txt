@@ -1,3 +1,0 @@
-# Optional MySQL C client for Hostinger/VPS only.
-# Do not install on Vercel — mysqlclient has no wheels and needs libmysqlclient.
-mysqlclient==2.2.8

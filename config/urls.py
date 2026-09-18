@@ -24,7 +24,7 @@ from django.views.static import serve
 
 
 def healthz(_request):
-    """Lightweight health check for Hostinger/Render (avoids heavy homepage DB work)."""
+    """Lightweight health check (avoids heavy homepage DB work)."""
     try:
         from django.db import connection
 
@@ -42,9 +42,7 @@ urlpatterns = [
     path("", include("courses.urls")),
 ]
 
-# Media uploads: Django's static() helper only registers routes when DEBUG=True.
-# In production we still serve media from the app so Hostinger OpenLiteSpeed
-# works before a /media/ context is added. Nginx can also alias /media/ directly.
+# Media: Django static() is DEBUG-only; production still serves /media/ from the app.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 else:
