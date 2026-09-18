@@ -28,8 +28,34 @@ except ImportError:
         pass
 
 
+def _env(name, default=""):
+    """Vercel often defines env vars as empty strings; treat those as unset."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    value = str(value).strip()
+    return value if value else default
+
+
+def _env_int(name, default):
+    raw = _env(name, "")
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _env_bool(name, default=False):
+    raw = _env(name, "")
+    if not raw:
+        return default
+    return raw.lower() in ("1", "true", "yes", "on")
+
+
 def _csv_env(name, default=""):
-    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+    return [item.strip() for item in _env(name, default).split(",") if item.strip()]
 
 
 def _hostname(value):
@@ -58,7 +84,7 @@ def _fallback_secret_key():
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
+SECRET_KEY = _env("SECRET_KEY", "")
 if (
     not SECRET_KEY
     or SECRET_KEY.startswith("django-insecure-")
@@ -73,7 +99,7 @@ if (
     SECRET_KEY = _fallback_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes", "on")
+DEBUG = _env_bool("DEBUG", True)
 
 # Local + Vercel by default. Optional SITE_DOMAIN for a custom domain.
 _default_hosts = "127.0.0.1,localhost,.vercel.app"
@@ -110,7 +136,7 @@ if os.environ.get("VERCEL"):
         ALLOWED_HOSTS.append(vercel_project)
 
 # Allow "*" only when explicitly requested (never default).
-if os.environ.get("ALLOWED_HOSTS", "").strip() == "*":
+if _env("ALLOWED_HOSTS", "") == "*":
     ALLOWED_HOSTS = ["*"]
 
 CSRF_TRUSTED_ORIGINS = _csv_env("CSRF_TRUSTED_ORIGINS")
@@ -185,14 +211,14 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 def _build_databases():
-    database_url = os.environ.get("DATABASE_URL")
+    database_url = _env("DATABASE_URL", "")
     if database_url:
         try:
             import dj_database_url
 
-            ssl_require = bool(os.environ.get("RENDER")) or os.environ.get(
-                "DATABASE_SSL_REQUIRE", ""
-            ).lower() in ("1", "true", "yes", "on")
+            ssl_require = bool(os.environ.get("RENDER")) or _env_bool(
+                "DATABASE_SSL_REQUIRE", False
+            )
             return {
                 "default": dj_database_url.config(
                     default=database_url,
@@ -204,7 +230,7 @@ def _build_databases():
         except Exception:
             pass
 
-    engine = os.environ.get("DATABASE_ENGINE", "").strip()
+    engine = _env("DATABASE_ENGINE", "")
     if engine and ("postgresql" in engine or "postgres" in engine):
         return {
             "default": {
@@ -271,7 +297,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / "staticfiles"))
+STATIC_ROOT = Path(_env("STATIC_ROOT", str(BASE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 
 # WhiteNoise compressed static files (Manifest optional; CompressedStaticFilesStorage
@@ -286,30 +312,20 @@ STORAGES = {
 }
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
+MEDIA_ROOT = Path(_env("MEDIA_ROOT", str(BASE_DIR / "media")))
 
 # Question import preview can post many fields (one bank of 80+ questions
 # with options/metadata). Django's default 1000 limit raises TooManyFieldsSent.
 # The preview form also sends a single JSON payload; this is a safety net.
-DATA_UPLOAD_MAX_NUMBER_FIELDS = int(
-    os.environ.get("DATA_UPLOAD_MAX_NUMBER_FIELDS", "20000")
+DATA_UPLOAD_MAX_NUMBER_FIELDS = _env_int("DATA_UPLOAD_MAX_NUMBER_FIELDS", 20000)
+DATA_UPLOAD_MAX_MEMORY_SIZE = _env_int(
+    "DATA_UPLOAD_MAX_MEMORY_SIZE", 100 * 1024 * 1024
 )
-# Blog video/PDF/PPT uploads + Word/equation payloads. Default 100MB so
-# multi-file blog posts (image + video + PDF + PPT) are not rejected with
-# RequestDataTooBig before the form can validate individual field limits.
-DATA_UPLOAD_MAX_MEMORY_SIZE = int(
-    os.environ.get("DATA_UPLOAD_MAX_MEMORY_SIZE", str(100 * 1024 * 1024))
-)
-# Keep modest in-memory buffering; larger files spill to temp disk.
-FILE_UPLOAD_MAX_MEMORY_SIZE = int(
-    os.environ.get("FILE_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024))
+FILE_UPLOAD_MAX_MEMORY_SIZE = _env_int(
+    "FILE_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024
 )
 
-# CORS Configuration — open in local DEBUG, locked down in production
-_cors_default = "True" if DEBUG else "False"
-CORS_ALLOW_ALL_ORIGINS = os.environ.get(
-    "CORS_ALLOW_ALL_ORIGINS", _cors_default
-).lower() in ("1", "true", "yes", "on")
+CORS_ALLOW_ALL_ORIGINS = _env_bool("CORS_ALLOW_ALL_ORIGINS", DEBUG)
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
@@ -321,36 +337,22 @@ REST_FRAMEWORK = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = os.environ.get("USE_X_FORWARDED_HOST", "True").lower() in (
-    "1",
-    "true",
-    "yes",
-    "on",
-)
+USE_X_FORWARDED_HOST = _env_bool("USE_X_FORWARDED_HOST", True)
 USE_X_FORWARDED_PORT = True
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
+    SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", True)
     SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]
-    _secure_cookie_default = "True" if SECURE_SSL_REDIRECT else "False"
-    SESSION_COOKIE_SECURE = os.environ.get(
-        "SESSION_COOKIE_SECURE", _secure_cookie_default
-    ).lower() in ("1", "true", "yes", "on")
-    CSRF_COOKIE_SECURE = os.environ.get(
-        "CSRF_COOKIE_SECURE", _secure_cookie_default
-    ).lower() in ("1", "true", "yes", "on")
+    _secure_cookie_default = True if SECURE_SSL_REDIRECT else False
+    SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", _secure_cookie_default)
+    CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", _secure_cookie_default)
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     # SAMEORIGIN (not DENY): past papers / resource viewers embed PDFs from
     # the same host; DENY can cause blank viewers and odd client errors.
-    X_FRAME_OPTIONS = os.environ.get("X_FRAME_OPTIONS", "SAMEORIGIN")
+    X_FRAME_OPTIONS = _env("X_FRAME_OPTIONS", "SAMEORIGIN")
     if SECURE_SSL_REDIRECT:
-        SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
+        SECURE_HSTS_SECONDS = _env_int("SECURE_HSTS_SECONDS", 31536000)
         SECURE_HSTS_INCLUDE_SUBDOMAINS = True
         SECURE_HSTS_PRELOAD = True
     else:
@@ -358,7 +360,10 @@ if not DEBUG:
         SECURE_HSTS_INCLUDE_SUBDOMAINS = False
         SECURE_HSTS_PRELOAD = False
 
-# Logging — console (Vercel / Render / local)
+_log_level = _env("LOG_LEVEL", "INFO").upper()
+if _log_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    _log_level = "INFO"
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -376,7 +381,7 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": os.environ.get("LOG_LEVEL", "INFO"),
+        "level": _log_level,
     },
     "loggers": {
         "django.request": {
