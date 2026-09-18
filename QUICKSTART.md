@@ -46,10 +46,13 @@ API: http://localhost:8000/api/
 
 ## 🔑 Admin Access
 
-**Username:** (created during setup)
-**Password:** (created during setup)
+The default SQLite database (`db.sqlite3`) ships with this admin account:
 
-Or create new superuser:
+**Username:** `admin`  
+**Password:** `admin123`  
+**Login:** http://localhost:8000/login/
+
+Or create another superuser:
 
 ```bash
 python manage.py createsuperuser

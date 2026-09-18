@@ -108,13 +108,20 @@ A comprehensive learning management system built with Django backend and React c
    pip install -r requirements.txt
    ```
 
-4. **Apply migrations:**
+4. **Apply migrations (default Django SQLite database at `db.sqlite3`):**
 
    ```bash
    python manage.py migrate
+   python create_admin_user.py
+   python manage.py load_sample_data
    ```
 
-5. **Create a superuser for admin access:**
+   A committed `db.sqlite3` is already included for local use. Default admin login:
+
+   - Username: `admin`
+   - Password: `admin123`
+
+5. **Create another superuser (optional):**
 
    ```bash
    python manage.py createsuperuser

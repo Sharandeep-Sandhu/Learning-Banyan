@@ -1,50 +1,58 @@
 #!/usr/bin/env python
 """
-Script to create a test admin user for the Learning Banyan platform.
+Create the default admin user for the Learning Banyan platform.
 Usage: python create_admin_user.py
 """
 
 import os
-import django
-from django.contrib.auth.models import User
 
-# Setup Django
+import django
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
+from django.contrib.auth.models import User
+
 from admin_panel.models import AdminUser
+
+DEFAULT_USERNAME = "admin"
+DEFAULT_EMAIL = "admin@learningbanyan.com"
+DEFAULT_PASSWORD = "admin123"
 
 
 def create_admin():
-    """Create a test admin user"""
-
-    # Check if admin already exists
-    if User.objects.filter(username="admin").exists():
-        print("❌ Admin user 'admin' already exists!")
-        return
-
-    # Create Django user
-    user = User.objects.create_user(
-        username="admin",
-        email="admin@learninghub.com",
-        password="admin123",
-        first_name="Admin",
-        last_name="User",
+    user, created = User.objects.get_or_create(
+        username=DEFAULT_USERNAME,
+        defaults={
+            "email": DEFAULT_EMAIL,
+            "first_name": "Admin",
+            "last_name": "User",
+        },
     )
+    user.email = DEFAULT_EMAIL
+    user.first_name = user.first_name or "Admin"
+    user.last_name = user.last_name or "User"
     user.is_staff = True
-    user.is_superuser = False
+    user.is_superuser = True
+    user.set_password(DEFAULT_PASSWORD)
     user.save()
 
-    # Create admin profile
-    admin_profile = AdminUser.objects.create(
-        user=user, is_admin=True, can_upload_csv=True, can_manage_questions=True
+    AdminUser.objects.get_or_create(
+        user=user,
+        defaults={
+            "is_admin": True,
+            "can_upload_csv": True,
+            "can_manage_questions": True,
+        },
     )
 
-    print("✅ Admin user created successfully!")
-    print(f"   Username: admin")
-    print(f"   Password: admin123")
-    print(f"   Email: admin@learninghub.com")
-    print(f"\n🔐 Login at: http://localhost:8000/login/  (admin is redirected to Admin Panel)")
+    action = "created" if created else "updated"
+    print(f"Admin user {action} successfully.")
+    print(f"   Username: {DEFAULT_USERNAME}")
+    print(f"   Password: {DEFAULT_PASSWORD}")
+    print(f"   Email: {DEFAULT_EMAIL}")
+    print("\nLogin at: http://127.0.0.1:8000/login/")
+    print("Admins are sent to the Admin Panel; Django admin is at /admin/.")
 
 
 if __name__ == "__main__":
