@@ -96,6 +96,20 @@ _vps_ip = _hostname(os.environ.get("VPS_IP", ""))
 if _vps_ip and _vps_ip not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_vps_ip)
 
+# Vercel preview + production URLs (VERCEL=1 is set by the platform).
+if os.environ.get("VERCEL"):
+    if ".vercel.app" not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(".vercel.app")
+    vercel_url = _hostname(os.environ.get("VERCEL_URL", ""))
+    if vercel_url and vercel_url not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(vercel_url)
+    vercel_branch = _hostname(os.environ.get("VERCEL_BRANCH_URL", ""))
+    if vercel_branch and vercel_branch not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(vercel_branch)
+    vercel_project = _hostname(os.environ.get("VERCEL_PROJECT_PRODUCTION_URL", ""))
+    if vercel_project and vercel_project not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(vercel_project)
+
 # Allow "*" only when explicitly requested (never default).
 if os.environ.get("ALLOWED_HOSTS", "").strip() == "*":
     ALLOWED_HOSTS = ["*"]
@@ -107,6 +121,10 @@ if _render_hostname:
     _origin = f"https://{_render_hostname}"
     if _origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_origin)
+if os.environ.get("VERCEL"):
+    for origin in ("https://*.vercel.app",):
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 
 for host in ALLOWED_HOSTS:
     if host in ("*", "localhost", "127.0.0.1") or host.startswith("."):
@@ -223,10 +241,19 @@ def _build_databases():
             }
         }
 
+    sqlite_name = BASE_DIR / "db.sqlite3"
+    # Vercel’s function filesystem is read-only except /tmp.
+    if os.environ.get("VERCEL"):
+        import shutil
+
+        tmp_db = Path("/tmp/learning_banyan.sqlite3")
+        if sqlite_name.exists() and not tmp_db.exists():
+            shutil.copy2(sqlite_name, tmp_db)
+        sqlite_name = tmp_db
     return {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": sqlite_name,
         }
     }
 

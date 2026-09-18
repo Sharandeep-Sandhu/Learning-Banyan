@@ -77,6 +77,9 @@ elif pkg-config --exists mysqlclient; then
 fi
 pip install --upgrade pip
 pip install -r requirements.txt
+if [ "$DB_ENGINE" != "postgres" ]; then
+  pip install -r requirements-mysql.txt
+fi
 
 SECRET_VALUE="$(python3 - <<'PY'
 import secrets

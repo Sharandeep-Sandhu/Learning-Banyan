@@ -105,36 +105,18 @@ docker-compose down -v
 
 ## Vercel Deployment
 
-Vercel is optimized for Next.js applications. For a Django application, you'll need a different approach:
+Vercel detects `manage.py` and deploys Django as a Python serverless function.
 
-### Option 1: Using Vercel with Django (Serverless)
+1. Import the GitHub repo in the Vercel dashboard (Framework Preset: Other / Django).
+2. Set these **Environment Variables** (Production + Preview):
+   - `SECRET_KEY` — a long random string
+   - `DEBUG` — `False`
+   - `ALLOWED_HOSTS` — `.vercel.app` (or your custom domain)
+3. Redeploy.
 
-1. **Add Vercel configuration file:**
-   Create `vercel.json`:
+Do **not** add `mysqlclient` on Vercel. The app uses SQLite (`db.sqlite3`) by default, or Postgres if you set `DATABASE_URL`. SQLite writes on Vercel live in `/tmp` (reset on each cold start). For persistent data, attach Vercel Postgres / Neon and set `DATABASE_URL`.
 
-   ```json
-   {
-     "buildCommand": "pip install -r requirements.txt && python manage.py collectstatic",
-     "outputDirectory": "staticfiles",
-     "env": {
-       "DJANGO_SETTINGS_MODULE": "config.settings"
-     }
-   }
-   ```
-
-2. **Deploy to Vercel:**
-   ```bash
-   npm i -g vercel
-   vercel deploy
-   ```
-
-### Option 2: Vercel with External Backend
-
-Deploy Django separately and connect to Vercel frontend:
-
-1. Deploy Django to Heroku, AWS, or DigitalOcean
-2. Update API endpoints in frontend to point to your backend
-3. Deploy frontend to Vercel
+Large media folders are listed in `.vercelignore` so the function bundle stays under Vercel’s size limit.
 
 ## Heroku Deployment
 

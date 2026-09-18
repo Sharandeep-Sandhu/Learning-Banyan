@@ -269,6 +269,18 @@ bash /var/www/learningbanyan/deploy/hostinger/setup.sh
 
 Then create an admin user and issue SSL with certbot (steps in the guide).
 
+### Vercel
+
+Connect the GitHub repo at [vercel.com](https://vercel.com). Vercel detects Django from `manage.py`.
+
+Set environment variables:
+
+- `SECRET_KEY` — random long string
+- `DEBUG` — `False`
+- `ALLOWED_HOSTS` — `.vercel.app`
+
+The default database is SQLite. For persistent data on Vercel, add a Postgres `DATABASE_URL`.
+
 ### Render
 
 Full guide: **[RENDER_DEPLOY.md](RENDER_DEPLOY.md)**
