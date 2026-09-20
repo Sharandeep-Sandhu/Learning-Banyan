@@ -58,8 +58,8 @@
         max-width: 1280px;
         margin: 0 auto;
         padding: 0 1.25rem;
-        min-height: 80px;
-        height: 80px;
+        min-height: 104px;
+        height: 104px;
         display: flex;
         align-items: center;
         gap: 1rem;
@@ -85,12 +85,11 @@
       }
 
       .nav-brand img {
-        height: 58px;
-        width: 58px;
-        border-radius: 50%;
+        height: 88px;
+        width: 88px;
         display: block;
         object-fit: contain;
-        background: #E9EEF2;
+        background: transparent;
         flex-shrink: 0;
       }
 
@@ -583,7 +582,7 @@
         .site-nav {
           flex-wrap: wrap;
           height: auto;
-          min-height: 76px;
+          min-height: 100px;
           padding: 0.55rem 1rem;
         }
 
@@ -708,7 +707,7 @@
     <header class="site-header">
       <nav class="site-nav" id="siteNav" aria-label="Main navigation">
         <a class="nav-brand" href="{% url 'courses:home' %}">
-          <img src="{% static 'images/learning_banyan_logo.jpeg' %}" alt="Learning Banyan" />
+          <img src="{% static 'images/learning_banyan_logo.png' %}" alt="Learning Banyan" />
           <div class="nav-brand-text">
             <strong>Learning Banyan</strong>
           </div>
